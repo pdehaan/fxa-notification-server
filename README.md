@@ -21,7 +21,7 @@ What sort of reliability guarantees are we after here?
 
 What sorts of events are likely to flow through this system, and in
 what format?
-   - account creation, deletion
+   - account creation, verification, deletion
    - password change and reset
    - oauth token revocation and expiry
    - profile data change
