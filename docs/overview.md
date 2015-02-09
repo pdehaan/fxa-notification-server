@@ -39,19 +39,22 @@ The service exposes a single, shared "event log" into which events can be
 published, and which can be read incrementally by clients.  Events are
 uniquely identified by their position in the log.  The primitive producer
 operation is "append this event to the log" and the primitive consumer
-operation is "fetch events newer than this in the log".
+operation is "fetch events newer than this point in the log".
 
 Each event is a JWT signed by the issuing service.  The notification server
 validates each event as it is received, but clients may also perform their
-own validation.  Events have precisely the following set of fields:
+own validation.  Events must have the following standard set of fields:
 
-  * iss:  the server issuing the event
+  * iss:  hostname of the server issuing the event
+  * aud:  hostname of the fxa-notification-server receiving the event
   * iat:  wall-clock time at which the event occurred
-  * sub:  the firefox accounts uid
-  * typ:  string describing type of event
-  * aud:  a specific relier to whom this event is relevant
-  * XXX TODO: maybe "uid" for account-uid field?
-  * XXX TODO: maybe "exp" if we know the event will be useless after a while?
+  * typ:  issuer-specific string describing type of event
+
+They may also include the following fields if relevant:
+
+  * uid:  a specific firefox accounts uid to which this event refers
+  * rid:  a specific relier to which this event is relevant
+  * sub:  typ-specific identifier for relevant data to the event
 
 Producers are discouraged from including additional information in the event.
 In particular, they should *not* include any sensitive account data like
@@ -63,6 +66,7 @@ Queries to the event log can be filtered according to these fields:
   * events from a specific issuer
   * events regarding a specific account
   * events of a specific type
+  * events directed at a specific relier
 
 XXX TODO:
 
@@ -105,19 +109,19 @@ Example Events
 
 Account create/delete/verify/pwdchange/pwdreset:
 * iss: api.accounts.firefox.com
-* sub: account-id
+* uid: account-id
 * typ: create/delete/verify/pwdchange/pwdreset
 
 Oauth token lifecycle:
 * iss: oauth.accounts.firefox.com
-* sub: account-id
-* typ: revoke/expire
-* XXX TODO: somehow include identifier for the token...?
-* aud: relier client id
+* uid: account-id
+* rid: relier client id
+* sub: hash of token id
+* typ: destroy
 
 Profile data change:
 * iss: profile.accounts.firefox.com
-* sub: account-id
+* uid: account-id
 * typ: change
 
 
