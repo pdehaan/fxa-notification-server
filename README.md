@@ -1,5 +1,5 @@
-Firefox Accounts Notification Server
-====================================
+
+# Firefox Accounts Notification Server
 
 This is an experimental hub service for handling account event notifications
 in the Firefox Accounts ecosystem.  Service Providers will be able to use it

@@ -1,7 +1,6 @@
-Firefox Accounts Notification Server
-====================================
+# Firefox Accounts Notification Server
 
-The Firefox Accounts Notification Server provides a way for for services in the
+The Firefox Accounts Notification Server provides a way for services in the
 Firefox Accounts ecosystem to publish event notifications, and for reliers to
 detect and act on such events.  It is designed to be simple, extensible and
 secure.
@@ -9,15 +8,14 @@ secure.
 Think "pub-sub hub" and you'll be pretty close to the mark.
 
 
-Design Principles
------------------
+## Design Principles
 
 * Pull is fundamental, push is a bonus.  Reliers should always be abe to
   "re-sync from scratch" to ensure they have all the latest information.
   The ability to get timely notifications and incremental updates is
   important but must be treated as unreliable.
 
-* Many-to-many.  The Firefox Accounts ecosystem consists of many small
+* Ad-hoc many-to-many.  The Firefox Accounts ecosystem consists of many small
   services that interact in a distributed manner.  This service should not
   need to know about who they all are and what the connections are between
   them.
@@ -29,11 +27,10 @@ Design Principles
 
 * Delegate identity and authentication.  New consumers of this service must be
   able to come and go without having to reconfigure the server, create or
-  change shared secrets, or other such points of centralization.
+  change shared secrets, or depend on other such points of centralization.
   
 
-Core Concepts
--------------
+## Core Concepts
 
 The service exposes a single, shared "event log" into which events can be
 published, and which can be read incrementally by clients.  Events are
@@ -48,35 +45,43 @@ own validation.  Events must have the following standard set of fields:
   * iss:  hostname of the server issuing the event
   * aud:  hostname of the fxa-notification-server receiving the event
   * iat:  wall-clock time at which the event occurred
-  * typ:  issuer-specific string describing type of event
+  * typ:  issuer-specific string describing the type of event
 
 They may also include the following fields if relevant:
 
   * uid:  a specific firefox accounts uid to which this event refers
   * rid:  a specific relier to which this event is relevant
-  * sub:  typ-specific identifier for relevant data to the event
+  * sub:  typ-specific string identifying data relevant to the event
 
 Producers are discouraged from including additional information in the event.
 In particular, they should *not* include any sensitive account data like
 email addresses.  Consumers are responsible for fetching this data directly
 from the controlling service in response to an event.
 
-Queries to the event log can be filtered according to these fields:
+Queries to the event log can be filtered to a specific value of `iss`, `typ`,
+`uid` and `rid`.
 
-  * events from a specific issuer
-  * events regarding a specific account
-  * events of a specific type
-  * events directed at a specific relier
+
+In addition to the core client-pull-based API, it's possible to have the
+notification server call a webhook or simplepush endpoint when new events
+are added to the log.
+
+A subscription specifies the endpoint URL to hit and any filters to apply to
+the log.  It also maintains a "last seen position" so that clients can treat it
+like a queue without maintaining their own internal state.
 
 XXX TODO:
 
-  * full-blown JWT?  Is this overkill?
-  * formalize the JKU used in JWT, trusted JKUs etc.
-     * then we can potential limit by wildcard-matching on issuers
+  * A full-blown JWT for each event?
+     * Is this overkill?
+     * Will the overhead of verifying the JWTs destroy us all?
+  * Formalize the JKU used in JWT, trusted JKUs etc.
+     * we may want to restrict publishing by wildcard-matching on issuers
+     * the JKU should be at a URL that's obviously controlled by the issuer
+     * some sort of well-known location to fetch from by default?
 
 
-Authentication and Security
----------------------------
+## Authentication and Security
 
 Publishers do not need to authenticate explicitly to the service, since
 all events are signed JWTs.  Instead, the notification server has internal
@@ -90,22 +95,7 @@ To prevent them from seeing events from users that have never authorized
 that service?  It might even require a user-specific oauth token.
 
 
-Subscriptions
--------------
-
-In addition to the core client-pull-based API, it's possible to have the
-notification server call a webhook or simplepush endpoint when new events
-are added to the log.
-
-A subscription specifies the endpoint URL to hit and any filters to apply to
-the log.  It also maintains the last-seen-event so that clients can treat it
-like a queue.
-
-XXX TODO define API for this.
-
-
-Example Events
---------------
+## Example Events
 
 Account create/delete/verify/pwdchange/pwdreset:
 * iss: api.accounts.firefox.com
@@ -120,15 +110,6 @@ Oauth token lifecycle:
 * typ: destroy
 
 Profile data change:
-* iss: profile.accounts.firefox.com
-* uid: account-id
-* typ: change
-
-
-Example Subscriptions
----------------------
-
-Watch for change in user's profile data:
 * iss: profile.accounts.firefox.com
 * uid: account-id
 * typ: change
