@@ -1,5 +1,6 @@
 var config = require('./config')
 var log = require('./log')
+var db = require('./db')
 var hapi = require('hapi')
 var joi = require('joi')
 var server = new hapi.Server()
@@ -21,6 +22,10 @@ server.route([
       }
     },
     handler: function (req, reply) {
+      var events = req.payload.events
+      for (var i = 0; i < events.length; i++) {
+        db.append(events[i])
+      }
       reply({})
     }
   },
@@ -40,21 +45,27 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({})
+      var query = req.query
+      var pos = query.pos || 0
+      reply(db.read(pos))
     }
   },
   {
     method: 'GET',
     path: '/v1/events/head',
     handler: function (req, reply) {
-      reply({})
+      reply({
+        pos: db.head()
+      })
     }
   },
   {
     method: 'GET',
     path: '/v1/events/tail',
     handler: function (req, reply) {
-      reply({})
+      reply({
+        pos: db.tail()
+      })
     }
   },
   {
