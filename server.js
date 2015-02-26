@@ -1,6 +1,7 @@
 var config = require('./config')
 var log = require('./log')
 var db = require('./db')
+var scribe = require('./scribe')
 var hapi = require('hapi')
 var joi = require('joi')
 var server = new hapi.Server()
@@ -24,7 +25,11 @@ server.route([
     handler: function (req, reply) {
       var events = req.payload.events
       for (var i = 0; i < events.length; i++) {
-        db.append(events[i])
+        try {
+          var event = JSON.parse(events[i])
+          db.append(event)
+        }
+        catch (e) {}
       }
       reply({})
     }
@@ -46,8 +51,14 @@ server.route([
     },
     handler: function (req, reply) {
       var query = req.query
-      var pos = query.pos || 0
-      reply(db.read(pos))
+      var pos = query.pos || '0'
+      var num = query.num || 1000
+      var filter = {}
+      if (query.uid) { filter.uid = query.uid }
+      if (query.rid) { filter.rid = query.rid }
+      if (query.iss) { filter.iss = query.iss }
+      if (query.typ) { filter.typ = query.typ }
+      reply(db.read(pos, num, filter))
     }
   },
   {
@@ -87,19 +98,22 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({})
+      var sub = scribe.add(req.payload)
+      reply({
+        id: sub.id
+      })
     }
   },
   {
     method: 'GET',
-    path: '/v1/subscription/:id',
+    path: '/v1/subscription/{id}',
     handler: function (req, reply) {
-      reply({})
+      reply(scribe.get(req.params.id))
     }
   },
   {
     method: 'POST',
-    path: '/v1/subscription/:id',
+    path: '/v1/subscription/{id}',
     config: {
       validate: {
         payload: {
@@ -109,19 +123,25 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({})
+      var sub = scribe.get(req.params.id)
+      if (sub) {
+        if (req.payload.pos) { sub.pos = req.payload.pos }
+        if (req.payload.notify_url) { sub.notify_url = req.payload.notify_url }
+      }
+      reply(sub)
     }
   },
   {
     method: 'DELETE',
-    path: '/v1/subscription/:id',
+    path: '/v1/subscription/{id}',
     handler: function (req, reply) {
+      scribe.remove(req.params.id)
       reply({})
     }
   },
   {
     method: 'GET',
-    path: '/v1/subscription/:id/events',
+    path: '/v1/subscription/{id}/events',
     config: {
       validate: {
         query: {
@@ -131,12 +151,20 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({})
+      var sub = scribe.get(req.params.id)
+      var pos = req.query.pos || '0'
+      var num = req.query.num || 1000
+      if (sub) {
+        reply(db.read(pos, num, sub.filter))
+      }
+      else {
+        reply({})
+      }
     }
   },
   {
     method: 'POST',
-    path: '/v1/subscription/:id/events',
+    path: '/v1/subscription/{id}/events',
     config: {
       validate: {
         payload: {
@@ -145,7 +173,14 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({})
+      var sub = scribe.get(req.params.id)
+      if (sub) {
+        sub.pos = req.payload.pos
+        reply(db.read(sub.pos, 1000, sub.filter))
+      }
+      else {
+        reply({})
+      }
     }
   }
 ])

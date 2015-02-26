@@ -1,15 +1,39 @@
 var db = []
 
+function match(event, filter) {
+  var filterNames = Object.keys(filter)
+  for (var i = 0; i < filterNames.length; i++) {
+    var name = filterNames[i]
+    if (event[name] && event[name] === filter[name]) {
+      continue
+    }
+    else {
+      return false
+    }
+  }
+  return true
+}
+
 module.exports = {
   append: function (event) {
     db.push(event)
     return (db.length - 1).toString()
   },
-  read: function (beginning) {
-    var end = Math.min(beginning + 1000, db.length)
+  read: function (pos, num, filter) {
+    pos = +pos || 0
+    num || 1000
+    filter = filter || {}
+    var events = []
+    while (events.length < num && pos < db.length) {
+      var event = db[pos]
+      if (match(event, filter)) {
+        events.push(event)
+      }
+      pos++
+    }
     return {
-      next_pos: end.toString(),
-      events: db.slice(beginning, end)
+      next_pos: pos.toString(),
+      events: events
     }
   },
   head: function () {
