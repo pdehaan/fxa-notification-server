@@ -2,6 +2,7 @@ var config = require('./config')
 var log = require('./log')
 var db = require('./db')
 var scribe = require('./scribe')
+var notifier = require('./notifier')
 var hapi = require('hapi')
 var joi = require('joi')
 var server = new hapi.Server()
@@ -24,13 +25,20 @@ server.route([
     },
     handler: function (req, reply) {
       var events = req.payload.events
+      var notifyUrls = {}
       for (var i = 0; i < events.length; i++) {
         try {
           var event = JSON.parse(events[i])
           db.append(event)
+          scribe.whoToNotify(event).forEach(
+            function (url) {
+              notifyUrls[url] = true
+            }
+          )
         }
         catch (e) {}
       }
+      notifier.ping(Object.keys(notifyUrls))
       reply({})
     }
   },
