@@ -2,7 +2,6 @@
   "name": "fxa-notification-server",
   "version": "1.0.0",
   "description": "This is an experimental hub service for handling account event notifications in the Firefox Accounts ecosystem.  Service Providers will be able to use it to publish notifications of various events, and Reliers will be able to use it to subscribe to said notifications.",
-  "main": "index.js",
   "directories": {
     "doc": "docs"
   },

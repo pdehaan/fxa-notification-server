@@ -1,11 +1,11 @@
-var config = require('./config')
-var log = require('./log')
-var subscriptions = require('./subscriptions')
-var notifier = require('./notifier')
+var config = require('./lib/config')
+var log = require('./lib/log')
+var subscriptions = require('./lib/subscriptions')
+var notifier = require('./lib/notifier')
 var hapi = require('hapi')
 var joi = require('joi')
 
-var db = require('./db/' + config.db.driver)
+var db = require('./lib/db/' + config.db.driver)
 
 var server = new hapi.Server()
 server.connection({
@@ -16,7 +16,7 @@ server.connection({
 server.route([
   {
     method: 'POST',
-    path: '/v1/publish',
+    path: '/v0/publish',
     config: {
       validate: {
         payload: {
@@ -45,7 +45,7 @@ server.route([
   },
   {
     method: 'GET',
-    path: '/v1/events',
+    path: '/v0/events',
     config: {
       validate: {
         query: {
@@ -72,7 +72,7 @@ server.route([
   },
   {
     method: 'GET',
-    path: '/v1/events/head',
+    path: '/v0/events/head',
     handler: function (req, reply) {
       reply({
         pos: db.head()
@@ -81,7 +81,7 @@ server.route([
   },
   {
     method: 'GET',
-    path: '/v1/events/tail',
+    path: '/v0/events/tail',
     handler: function (req, reply) {
       reply({
         pos: db.tail()
@@ -90,7 +90,7 @@ server.route([
   },
   {
     method: 'POST',
-    path: '/v1/subscribe',
+    path: '/v0/subscribe',
     config: {
       validate: {
         payload: {
@@ -115,14 +115,14 @@ server.route([
   },
   {
     method: 'GET',
-    path: '/v1/subscription/{id}',
+    path: '/v0/subscription/{id}',
     handler: function (req, reply) {
       reply(subscriptions.get(req.params.id))
     }
   },
   {
     method: 'POST',
-    path: '/v1/subscription/{id}',
+    path: '/v0/subscription/{id}',
     config: {
       validate: {
         payload: {
@@ -142,7 +142,7 @@ server.route([
   },
   {
     method: 'DELETE',
-    path: '/v1/subscription/{id}',
+    path: '/v0/subscription/{id}',
     handler: function (req, reply) {
       subscriptions.remove(req.params.id)
       reply({})
@@ -150,7 +150,7 @@ server.route([
   },
   {
     method: 'GET',
-    path: '/v1/subscription/{id}/events',
+    path: '/v0/subscription/{id}/events',
     config: {
       validate: {
         query: {
@@ -173,7 +173,7 @@ server.route([
   },
   {
     method: 'POST',
-    path: '/v1/subscription/{id}/events',
+    path: '/v0/subscription/{id}/events',
     config: {
       validate: {
         payload: {
