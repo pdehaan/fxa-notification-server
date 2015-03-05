@@ -21,6 +21,12 @@ var config = convict(
         format: 'port',
         default: 7879
       }
+    },
+    db: {
+      driver: {
+        format: String,
+        default: 'mem'
+      }
     }
   }
 )

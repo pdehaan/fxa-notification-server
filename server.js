@@ -1,12 +1,13 @@
 var config = require('./config')
 var log = require('./log')
-var db = require('./db')
-var scribe = require('./scribe')
+var subscriptions = require('./subscriptions')
 var notifier = require('./notifier')
 var hapi = require('hapi')
 var joi = require('joi')
-var server = new hapi.Server()
 
+var db = require('./db/' + config.db.driver)
+
+var server = new hapi.Server()
 server.connection({
   host: config.server.host,
   port: config.server.port
@@ -30,7 +31,7 @@ server.route([
         try {
           var event = JSON.parse(events[i])
           db.append(event)
-          scribe.whoToNotify(event).forEach(
+          subscriptions.whoToNotify(event).forEach(
             function (url) {
               notifyUrls[url] = true
             }
@@ -106,7 +107,7 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      var sub = scribe.add(req.payload)
+      var sub = subscriptions.add(req.payload)
       reply({
         id: sub.id
       })
@@ -116,7 +117,7 @@ server.route([
     method: 'GET',
     path: '/v1/subscription/{id}',
     handler: function (req, reply) {
-      reply(scribe.get(req.params.id))
+      reply(subscriptions.get(req.params.id))
     }
   },
   {
@@ -131,7 +132,7 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      var sub = scribe.get(req.params.id)
+      var sub = subscriptions.get(req.params.id)
       if (sub) {
         if (req.payload.pos) { sub.pos = req.payload.pos }
         if (req.payload.notify_url) { sub.notify_url = req.payload.notify_url }
@@ -143,7 +144,7 @@ server.route([
     method: 'DELETE',
     path: '/v1/subscription/{id}',
     handler: function (req, reply) {
-      scribe.remove(req.params.id)
+      subscriptions.remove(req.params.id)
       reply({})
     }
   },
@@ -159,7 +160,7 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      var sub = scribe.get(req.params.id)
+      var sub = subscriptions.get(req.params.id)
       var pos = req.query.pos || '0'
       var num = req.query.num || 1000
       if (sub) {
@@ -181,7 +182,7 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      var sub = scribe.get(req.params.id)
+      var sub = subscriptions.get(req.params.id)
       if (sub) {
         sub.pos = req.payload.pos
         reply(db.read(sub.pos, 1000, sub.filter))
