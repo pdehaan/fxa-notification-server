@@ -13,6 +13,23 @@ server.connection({
   port: config.server.port
 })
 
+server.register(
+  {
+    register: require('hapi-fxa-oauth'),
+    options: {
+      host: config.oauth.host,
+      port: config.oauth.port,
+      insecure: config.oauth.insecure
+    }
+  },
+  function (err) {
+    if (err) {
+      log.critical('plugin', { err: err })
+      process.exit(8)
+    }
+  }
+)
+
 server.route([
   {
     method: 'POST',
@@ -47,6 +64,10 @@ server.route([
     method: 'GET',
     path: '/v0/events',
     config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      },
       validate: {
         query: {
           pos: joi.string().optional(),
@@ -73,6 +94,12 @@ server.route([
   {
     method: 'GET',
     path: '/v0/events/head',
+    config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      }
+    },
     handler: function (req, reply) {
       reply({
         pos: db.head()
@@ -82,6 +109,12 @@ server.route([
   {
     method: 'GET',
     path: '/v0/events/tail',
+    config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      }
+    },
     handler: function (req, reply) {
       reply({
         pos: db.tail()
@@ -92,6 +125,10 @@ server.route([
     method: 'POST',
     path: '/v0/subscribe',
     config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      },
       validate: {
         payload: {
           notify_url: joi.string().required(),
@@ -116,6 +153,12 @@ server.route([
   {
     method: 'GET',
     path: '/v0/subscription/{id}',
+    config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      }
+    },
     handler: function (req, reply) {
       reply(subscriptions.get(req.params.id))
     }
@@ -124,6 +167,10 @@ server.route([
     method: 'POST',
     path: '/v0/subscription/{id}',
     config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      },
       validate: {
         payload: {
           pos: joi.string().optional(),
@@ -143,6 +190,12 @@ server.route([
   {
     method: 'DELETE',
     path: '/v0/subscription/{id}',
+    config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      }
+    },
     handler: function (req, reply) {
       subscriptions.remove(req.params.id)
       reply({})
@@ -152,6 +205,10 @@ server.route([
     method: 'GET',
     path: '/v0/subscription/{id}/events',
     config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      },
       validate: {
         query: {
           pos: joi.string().optional(),
@@ -175,6 +232,10 @@ server.route([
     method: 'POST',
     path: '/v0/subscription/{id}/events',
     config: {
+      auth: {
+        strategy: 'fxa-oauth',
+        scope: ['notify']
+      },
       validate: {
         payload: {
           pos: joi.string().required()
@@ -194,7 +255,11 @@ server.route([
   }
 ])
 
-server.start()
+server.start(
+  function () {
+    log.info('start', config.server)
+  }
+)
 
 process.on(
   'SIGINT',
