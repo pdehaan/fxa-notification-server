@@ -7,6 +7,7 @@
   "dependencies": {
     "convict": "0.6.1",
     "hapi": "8.2.0",
+    "hapi-fxa-oauth": "2.0.1",
     "joi": "5.1.0",
     "mozlog": "1.0.2"
   },
