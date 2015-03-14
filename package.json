@@ -13,6 +13,7 @@
     "jws": "2.0.0",
     "mozlog": "1.0.3",
     "pem-jwk": "1.1.1",
+    "redis": "0.12.1",
     "request": "2.53.0"
   },
   "devDependencies": {

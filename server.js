@@ -8,7 +8,7 @@ var notifier = require('./lib/notifier')
 var hapi = require('hapi')
 var joi = require('joi')
 
-var db = require('./lib/db/' + config.db.driver)
+var DB = require('./lib/db/' + config.db.driver)
 
 var keys = require('./lib/keys')(config)
 var jw = new JWKSet(config.jwk.trustedJKUs)
@@ -36,6 +36,7 @@ server.register(
   }
 )
 
+function createRoutes(db) {
 server.route([
   {
     method: 'GET',
@@ -71,13 +72,12 @@ server.route([
             str,
             function (err, jwt) {
               if (err) { return next(err) }
-              db.append(jwt)
-              subscriptions.whoToNotify(event).forEach(
+              subscriptions.whoToNotify(jwt).forEach(
                 function (url) {
                   notifyUrls[url] = true
                 }
               )
-              next()
+              db.append(str, next)
             }
           )
         },
@@ -117,7 +117,7 @@ server.route([
       if (query.rid) { filter.rid = query.rid }
       if (query.iss) { filter.iss = query.iss }
       if (query.typ) { filter.typ = query.typ }
-      reply(db.read(pos, num, filter))
+      db.read(pos, num, filter, reply)
     }
   },
   {
@@ -130,9 +130,11 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({
-        pos: db.head()
-      })
+      db.head(
+        function (err, pos) {
+          reply(err, { pos: pos })
+        }
+      )
     }
   },
   {
@@ -145,9 +147,11 @@ server.route([
       }
     },
     handler: function (req, reply) {
-      reply({
-        pos: db.tail()
-      })
+      db.tail(
+        function (err, pos) {
+          reply(err, { pos: pos })
+        }
+      )
     }
   },
   {
@@ -250,7 +254,7 @@ server.route([
       var pos = req.query.pos || '0'
       var num = req.query.num || 1000
       if (sub) {
-        reply(db.read(pos, num, sub.filter))
+        db.read(pos, num, sub.filter, reply)
       }
       else {
         reply({})
@@ -275,7 +279,7 @@ server.route([
       var sub = subscriptions.get(req.params.id)
       if (sub) {
         sub.pos = req.payload.pos
-        reply(db.read(sub.pos, 1000, sub.filter))
+        db.read(sub.pos, 1000, sub.filter, reply)
       }
       else {
         reply({})
@@ -283,12 +287,21 @@ server.route([
     }
   }
 ])
+}
 
-server.start(
-  function () {
-    log.info('start', config.server)
+DB.create(
+  config.db[config.db.driver],
+  function (err, db) {
+    createRoutes(db)
+    server.start(
+      function () {
+        log.info('start', config.server)
+        log.info('test', keys.secret.sign('foo'))
+      }
+    )
   }
 )
+
 
 process.on(
   'SIGINT',
