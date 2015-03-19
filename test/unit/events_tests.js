@@ -12,7 +12,7 @@ var authHeaders = {
   'Authorization': 'Bearer foo-bar-notify'
 }
 
-var fooJWT = keys.secret.sign(
+var fooJWT = keys.secret.signSync(
   {
     uid: 'foo',
     rid: 'bar',

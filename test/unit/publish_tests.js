@@ -16,7 +16,7 @@ var authHeaders = {
 
 function mangle(jwt) {
   var parts = jwt.split('.')
-  parts[1] = keys.secret.sign({ baz: true }).split('.')[1]
+  parts[1] = keys.secret.signSync({ baz: true }).split('.')[1]
   return parts.join('.')
 }
 
@@ -49,7 +49,7 @@ TestServer.start(config)
   test(
     'bad jwt signature',
     function (t) {
-      var jwt = mangle(keys.secret.sign({ bar: true }))
+      var jwt = mangle(keys.secret.signSync({ bar: true }))
 
       return r.postAsync(
         {
@@ -79,7 +79,7 @@ TestServer.start(config)
         }
       )
 
-      var jwt = jwk.sign({ foo: true })
+      var jwt = jwk.signSync({ foo: true })
       return r.postAsync(
         {
           url: publish,
@@ -108,7 +108,7 @@ TestServer.start(config)
         }
       )
 
-      var jwt = jwk.sign({ foo: true })
+      var jwt = jwk.signSync({ foo: true })
       return r.postAsync(
         {
           url: publish,
@@ -136,7 +136,7 @@ TestServer.start(config)
         }
       )
 
-      var jwt = jwk.sign({ foo: true })
+      var jwt = jwk.signSync({ foo: true })
       return r.postAsync(
         {
           url: publish,
@@ -166,7 +166,7 @@ TestServer.start(config)
         }
       )
 
-      var jwt = jwk.sign({ foo: true })
+      var jwt = jwk.signSync({ foo: true })
       return r.postAsync(
         {
           url: publish,
@@ -187,7 +187,7 @@ TestServer.start(config)
   test(
     'malformed jwt',
     function (t) {
-      var jwt = keys.secret.sign({ foo: true }).replace('e', 'f')
+      var jwt = keys.secret.signSync({ foo: true }).replace('e', 'f')
       return r.postAsync(
         {
           url: publish,
@@ -208,7 +208,7 @@ TestServer.start(config)
   test(
     'publish happy path',
     function (t) {
-      var jwt = keys.secret.sign({ foo: true })
+      var jwt = keys.secret.signSync({ foo: true })
 
       return r.postAsync(
         {
