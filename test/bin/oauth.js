@@ -8,32 +8,6 @@ server.connection({
   port: config.oauth.port
 })
 
-server.route([
-  {
-    method: 'GET',
-    path: '/__heartbeat__',
-    handler: function (req, reply) { reply() }
-  },
-  {
-    method: 'POST',
-    path: '/v1/verify',
-    // Test tokens ala handlebars template:
-    // "{{ user }}-{{ client_id }}-{{ scope }}"
-    // use the token "bad" to trigger an invalid token error
-    handler: function (req, reply) {
-      var token = req.payload.token
-      var words = token.split('-')
-      var creds = {
-        user: words[0],
-        client_id: words[1],
-        scope: words[2]
-      }
-      if (creds.user === 'bad') {
-        return reply({ code: 400, message: 'Invalid token'}).code(400)
-      }
-      reply(creds)
-    }
-  }
-])
+server.register(require('../lib/oauth_plugin'), function () {})
 
 server.start()

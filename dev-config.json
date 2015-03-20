@@ -1,0 +1,19 @@
+{
+  "log": {
+    "level": "trace",
+    "fmt": "pretty"
+  },
+  "oauth": {
+    "host": "127.0.0.1",
+    "port": "7879",
+    "insecure": true
+  },
+  "jwk": {
+    "secretKeyFile": "./test/test-secret.pem",
+    "publicKeyFile": "./test/test-public.pem",
+    "trustedJKUs": ["http://127.0.0.1:7879/.well-known/public-keys"]
+  },
+  "db": {
+    "driver": "mem"
+  }
+}

@@ -5,14 +5,21 @@
   "author": "Mozilla (https://mozilla.org/)",
   "bugs": "https://github.com/mozilla/fxa-notification-server/issues",
   "dependencies": {
+    "bluebird": "2.9.14",
+    "boom": "2.6.1",
     "convict": "0.6.1",
-    "hapi": "8.2.0",
+    "fxa-jwtool": "0.3.0",
+    "hapi": "8.4.0",
     "hapi-fxa-oauth": "2.0.1",
-    "joi": "5.1.0",
-    "mozlog": "1.0.2"
+    "joi": "6.0.8",
+    "jws": "2.0.0",
+    "mozlog": "2.0.0",
+    "redis": "0.12.1",
+    "request": "2.53.0"
   },
   "devDependencies": {
-    "lab": "5.2.1"
+    "istanbul": "0.3.8",
+    "tap": "0.7.1"
   },
   "directories": {
     "doc": "docs"
@@ -24,6 +31,7 @@
   "license": "MPL 2.0",
   "repository": "mozilla/fxa-notification-server",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "CONFIG_FILES=test/config.json tap test/unit/*.js",
+    "cover": "test/bin/cover.sh"
   }
 }
