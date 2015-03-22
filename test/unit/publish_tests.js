@@ -72,7 +72,7 @@ TestServer.start(config)
     'untrusted jku',
     function (t) {
       var jwk = JWK.fromPEM(
-        keys.secretPem,
+        keys.secret.pem,
         {
           alg: 'RS256',
           jku: base, // not on the trusted list
@@ -101,7 +101,7 @@ TestServer.start(config)
     'unavailable jku',
     function (t) {
       var jwk = JWK.fromPEM(
-        keys.secretPem,
+        keys.secret.pem,
         {
           alg: 'RS256',
           jku: unavailableJKU
@@ -129,7 +129,7 @@ TestServer.start(config)
     'bad jku',
     function (t) {
       var jwk = JWK.fromPEM(
-        keys.secretPem,
+        keys.secret.pem,
         {
           alg: 'RS256',
           jku: badJKU
@@ -158,7 +158,7 @@ TestServer.start(config)
     'unknown kid',
     function (t) {
       var jwk = JWK.fromPEM(
-        keys.secretPem,
+        keys.secret.pem,
         {
           alg: keys.secret.jwk.alg,
           jku: keys.secret.jwk.jku,
