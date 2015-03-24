@@ -2,6 +2,7 @@ var test = require('../lib/ptaptest')
 var config = require('../../lib/config')
 var TestServer = require('../lib/test_server')
 var r = require('../../lib/prequest')
+var P = require('../../lib/promise')
 
 var keys = require('../../lib/keys')(config)
 var base = 'http://' + config.server.host + ':' + config.server.port
@@ -10,27 +11,35 @@ var authHeaders = {
   'Authorization': 'Bearer foo-bar-notify'
 }
 
+function createSub(t, ttl) {
+  return r.postAsync(
+    {
+      url: base + '/v0/subscribe',
+      headers: authHeaders,
+      json: {
+        notify_url: 'foo',
+        ttl: ttl || 1
+      }
+    }
+  )
+  .then(
+    function (result) {
+      t.equal(result[0].statusCode, 200)
+      t.equal(typeof(result[1].id), 'string')
+      return result[1]
+    }
+  )
+}
+
 TestServer.start(config)
 .then(function (server) {
 
   test(
-    'subscribe',
+    'subscribe/get/del',
     function (t) {
-      return r.postAsync(
-        {
-          url: base + '/v0/subscribe',
-          headers: authHeaders,
-          json: {
-            notify_url: 'foo',
-            ttl: 1
-          }
-        }
-      )
+      return createSub(t)
       .then(
-        function (result) {
-          var res = result[0]
-          var data = result[1]
-          t.equal(res.statusCode, 200)
+        function (data) {
           t.equal(typeof(data.id), 'string')
           return r.getAsync(
             {
@@ -71,6 +80,201 @@ TestServer.start(config)
               t.deepEqual(data3, {})
             }
           )
+        }
+      )
+    }
+  )
+
+  test(
+    'updating subscription',
+    function (t) {
+      return createSub(t)
+      .then(
+        function (data) {
+          return r.postAsync(
+            {
+              url: sub + data.id,
+              headers: authHeaders,
+              json: {
+                notify_url: 'bar',
+                pos: '2'
+              }
+            }
+          )
+        }
+      )
+      .then(
+        function (result) {
+          t.equal(result[0].statusCode, 200)
+          var data = result[1]
+          t.equal(data.pos, '2')
+          t.equal(data.notify_url, 'bar')
+        }
+      )
+    }
+  )
+
+  test(
+    'subscription events',
+    function (t) {
+      return createSub(t)
+        .then(
+          function (data) {
+            return r.getAsync(
+              {
+                url: sub + data.id + '/events',
+                headers: authHeaders,
+                json: true
+              }
+            )
+            .then(
+              function (result) {
+                t.equal(result[0].statusCode, 200)
+                t.deepEqual(
+                  result[1],
+                  {
+                    next_pos: '0',
+                    events: []
+                  }
+                )
+              }
+            )
+          }
+        )
+    }
+  )
+
+  test(
+    'subscription events post',
+    function (t) {
+      return createSub(t)
+        .then(
+          function (data) {
+            return r.postAsync(
+              {
+                url: sub + data.id + '/events',
+                headers: authHeaders,
+                json: {
+                  pos: '1'
+                }
+              }
+            )
+            .then(
+              function (result) {
+                t.equal(result[0].statusCode, 200)
+                t.deepEqual(
+                  result[1],
+                  {
+                    next_pos: '1',
+                    events: []
+                  }
+                )
+                return r.getAsync(
+                  {
+                    url: sub + data.id,
+                    headers: authHeaders,
+                    json: true
+                  }
+                )
+              }
+            )
+          }
+        )
+        .then(
+          function (result) {
+            t.equal(result[0].statusCode, 200)
+            t.equal(result[1].pos, '1')
+          }
+        )
+    }
+  )
+
+  test(
+    'delete non existing sub',
+    function (t) {
+      return r.delAsync(
+        {
+          url: sub + 'wat',
+          headers: authHeaders,
+          json: true
+        }
+      )
+      .then(
+        function (result) {
+          t.equal(result[0].statusCode, 200, 'sure whatever')
+          t.deepEqual(result[1], {})
+        }
+      )
+    }
+  )
+
+  test(
+    'notify_url',
+    function (t) {
+      return createSub(t, 2)
+      .then(
+        function (data) {
+          return r.postAsync(
+            {
+              url: base + '/v0/publish',
+              json: {
+                events: [keys.secret.signSync({ foo: true })]
+              }
+            }
+          )
+        }
+      )
+      .then(
+        function (result) {
+          // TODO: this test is incomplete because sending to notify_url
+          // is incomplete. For now this just checks that the notify
+          // and filter logic doesn't blow up. See the code coverage
+          // to verify what is getting executed.
+          t.equal(result[0].statusCode, 200)
+        }
+      )
+    }
+  )
+
+  test(
+    'expiring ttl',
+    function (t) {
+      return createSub(t)
+      .then(
+        function (data) {
+          var id = data.id
+          return r.getAsync(
+            {
+              url: sub + id,
+              headers: authHeaders,
+              json: true
+            }
+          )
+          .then(
+            function (result) {
+              t.equal(result[0].statusCode, 200)
+              t.equal(result[1].id, id, 'now you see me')
+              var d = P.defer()
+              setTimeout(function () { d.resolve(id) }, 1100)
+              return d.promise
+            }
+          )
+        }
+      )
+      .then(
+        function (id) {
+          return r.getAsync(
+            {
+              url: sub + id,
+              headers: authHeaders,
+              json: true
+            }
+          )
+        }
+      )
+      .then(
+        function (result) {
+          t.equal(result[0].statusCode, 404, 'now you don\'t')
         }
       )
     }

@@ -1,11 +1,10 @@
 var JWT_STRING = /^[A-Za-z0-9_=\-\.]*$/ // roughly
 var boom = require('boom')
 var config = require('./lib/config')
+var Filter = require('./lib/filter')
 var P = require('./lib/promise')
 var JWTool = require('fxa-jwtool')
 var log = require('./lib/log')
-var subscriptions = require('./lib/subscriptions')
-var notifier = require('./lib/notifier')
 var Hapi = require('hapi')
 var joi = require('joi')
 
@@ -18,6 +17,7 @@ function Server(config) {
     new (
       require('./lib/db/' + config.db.driver)
     )(config.db[config.db.driver])
+  var subscriptions = this.subscriptions = require('./lib/subscriptions')(db)
 
   this.hapi.connection({
     host: config.server.host,
@@ -91,6 +91,11 @@ function Server(config) {
                 }
               )
             )
+            .then(
+              function () {
+                return subscriptions.notify(jwts)
+              }
+            )
           }
         )
         .then(
@@ -139,7 +144,7 @@ function Server(config) {
         if (query.rid) { filter.rid = query.rid }
         if (query.iss) { filter.iss = query.iss }
         if (query.typ) { filter.typ = query.typ }
-        db.read(pos, num, filter).then(reply, reply)
+        db.read(pos, num, new Filter(filter)).then(reply, reply)
       }
     },
     {
@@ -201,10 +206,13 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        var sub = subscriptions.add(req.payload)
-        reply({
-          id: sub.id
-        })
+        subscriptions.create(req.payload)
+          .then(
+            function (sub) {
+              reply({ id: sub.id })
+            },
+            reply
+          )
       }
     },
     {
@@ -217,8 +225,14 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        var sub = subscriptions.get(req.params.id)
-        reply(sub || boom.notFound(req.params.id))
+        subscriptions.get(req.params.id)
+          .then(
+            function (sub) {
+              subscriptions.set(sub) //touch
+              reply(sub)
+            },
+            reply
+          )
       }
     },
     {
@@ -237,12 +251,22 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        var sub = subscriptions.get(req.params.id)
-        if (sub) {
-          if (req.payload.pos) { sub.pos = req.payload.pos }
-          if (req.payload.notify_url) { sub.notify_url = req.payload.notify_url }
-        }
-        reply(sub || boom.notFound(req.params.id))
+        subscriptions.get(req.params.id)
+          .then(
+            function (sub) {
+              /* istanbul ignore else */
+              if (req.payload.pos) { sub.pos = req.payload.pos }
+              /* istanbul ignore else */
+              if (req.payload.notify_url) { sub.notify_url = req.payload.notify_url }
+              return subscriptions.set(sub)
+            }
+          )
+          .then(
+            function (sub) {
+              reply(sub)
+            },
+            reply
+          )
       }
     },
     {
@@ -255,8 +279,13 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        subscriptions.remove(req.params.id)
-        reply({})
+        subscriptions.del(req.params.id)
+          .then(
+            function () {
+              reply({})
+            },
+            reply
+          )
       }
     },
     {
@@ -275,13 +304,25 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        var sub = subscriptions.get(req.params.id)
         var pos = req.query.pos || '0'
         var num = req.query.num || 1000
-        if (sub) {
-          return db.read(pos, num, sub.filter, reply)
-        }
-        reply(boom.notFound(req.params.id))
+        subscriptions.get(req.params.id)
+          .then(
+            function (sub) {
+              return P.all(
+                [
+                  subscriptions.set(sub), // touch
+                  db.read(pos, num, sub.filter)
+                ]
+              )
+            }
+          )
+          .then(
+            function (all) {
+              reply(all[1])
+            },
+            reply
+          )
       }
     },
     {
@@ -299,12 +340,19 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        var sub = subscriptions.get(req.params.id)
-        if (sub) {
-          sub.pos = req.payload.pos
-          return db.read(sub.pos, 1000, sub.filter, reply)
-        }
-        reply(boom.notFound(req.params.id))
+        subscriptions.get(req.params.id)
+          .then(
+            function (sub) {
+              sub.pos = req.payload.pos
+              return subscriptions.set(sub)
+            }
+          )
+          .then(
+            function (sub) {
+              return db.read(sub.pos, 1000, sub.filter)
+            }
+          )
+          .then(reply, reply)
       }
     }
   ])
