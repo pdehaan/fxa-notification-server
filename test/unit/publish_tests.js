@@ -214,7 +214,7 @@ TestServer.start(config)
         {
           url: publish,
           json: {
-            events: [jwt]
+            events: [jwt, jwt]
           }
         }
       )
@@ -238,7 +238,7 @@ TestServer.start(config)
           var res = result[0]
           var data = result[1]
           t.equal(res.statusCode, 200)
-          t.equal(data.next_pos, '1')
+          t.equal(data.next_pos, '2')
           t.equal(data.events[0], jwt)
           return r.getAsync(
             {
@@ -254,7 +254,7 @@ TestServer.start(config)
           var res = result[0]
           var data = result[1]
           t.equal(res.statusCode, 200)
-          t.equal(data.pos, '1')
+          t.equal(data.pos, '2')
           return r.getAsync(
             {
               url: events + '/tail',
