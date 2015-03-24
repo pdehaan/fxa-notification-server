@@ -1,6 +1,7 @@
 var JWT_STRING = /^[A-Za-z0-9_=\-\.]*$/ // roughly
 var boom = require('boom')
 var config = require('./lib/config')
+var Filter = require('./lib/filter')
 var P = require('./lib/promise')
 var JWTool = require('fxa-jwtool')
 var log = require('./lib/log')
@@ -90,6 +91,11 @@ function Server(config) {
                 }
               )
             )
+            .then(
+              function () {
+                return subscriptions.notify(jwts)
+              }
+            )
           }
         )
         .then(
@@ -138,7 +144,7 @@ function Server(config) {
         if (query.rid) { filter.rid = query.rid }
         if (query.iss) { filter.iss = query.iss }
         if (query.typ) { filter.typ = query.typ }
-        db.read(pos, num, filter).then(reply, reply)
+        db.read(pos, num, new Filter(filter)).then(reply, reply)
       }
     },
     {
@@ -273,7 +279,7 @@ function Server(config) {
         }
       },
       handler: function (req, reply) {
-        subscriptions.remove(req.params.id)
+        subscriptions.del(req.params.id)
           .then(
             function () {
               reply({})

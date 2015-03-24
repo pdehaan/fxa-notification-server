@@ -35,7 +35,7 @@ TestServer.start(config)
 .then(function (server) {
 
   test(
-    'subscribe',
+    'subscribe/get/del',
     function (t) {
       return createSub(t)
       .then(
@@ -203,6 +203,34 @@ TestServer.start(config)
         function (result) {
           t.equal(result[0].statusCode, 200, 'sure whatever')
           t.deepEqual(result[1], {})
+        }
+      )
+    }
+  )
+
+  test(
+    'notify_url',
+    function (t) {
+      return createSub(t, 2)
+      .then(
+        function (data) {
+          return r.postAsync(
+            {
+              url: base + '/v0/publish',
+              json: {
+                events: [keys.secret.signSync({ foo: true })]
+              }
+            }
+          )
+        }
+      )
+      .then(
+        function (result) {
+          // TODO: this test is incomplete because sending to notify_url
+          // is incomplete. For now this just checks that the notify
+          // and filter logic doesn't blow up. See the code coverage
+          // to verify what is getting executed.
+          t.equal(result[0].statusCode, 200)
         }
       )
     }
