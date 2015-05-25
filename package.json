@@ -29,7 +29,7 @@
   "keywords": [
     "fxa"
   ],
-  "license": "MPL 2.0",
+  "license": "MPL-2.0",
   "repository": "mozilla/fxa-notification-server",
   "scripts": {
     "test": "CONFIG_FILES=test/config.json tap test/unit/*.js",
