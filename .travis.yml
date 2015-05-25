@@ -4,3 +4,10 @@ node_js:
   - '0.12'
   - 'iojs'
 sudo: false
+
+notifications:
+  irc:
+    channels:
+      - "irc.mozilla.org#fxa"
+    use_notice: false
+    skip_join: false
